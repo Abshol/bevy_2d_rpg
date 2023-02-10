@@ -7,6 +7,9 @@ use crate::{ascii::{AsciiSheet, spawn_ascii_sprite}, TILE_SIZE};
 pub struct TileMapPlugin;
 
 #[derive(Component)]
+pub struct EncounterSpawner;
+
+#[derive(Component)]
 pub struct TileCollider;
 
 
@@ -30,6 +33,9 @@ fn create_simple_map(mut commands: Commands, ascii: Res<AsciiSheet>){
                     Color::rgb(0.9, 0.9, 0.9), 
                     Vec3::new(x as f32 * TILE_SIZE, -(y as f32) * TILE_SIZE, 100.0));   
                     if char == '#' {
+                        commands.entity(tile).insert(TileCollider);
+                    }
+                    if char == '~' {
                         commands.entity(tile).insert(TileCollider);
                     }
                     tiles.push(tile);

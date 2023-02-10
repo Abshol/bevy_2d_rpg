@@ -14,8 +14,14 @@ use debug::DebugPlugin;
 use tilemap::TileMapPlugin;
 use ascii::AsciiPlugin;
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
+pub enum GameState {
+    Overworld,
+    Combat,
+}
 fn main() {
     App::new()
+    .add_state(GameState::Overworld)
     .insert_resource(ClearColor(CLEAR))
     .insert_resource(WindowDescriptor {
         width : 1600.0,
