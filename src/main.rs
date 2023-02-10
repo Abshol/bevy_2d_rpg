@@ -8,11 +8,13 @@ pub const TILE_SIZE: f32 = 0.1;
 mod player;
 mod ascii;
 mod tilemap;
+mod combat;
 mod debug;
 use player::PlayerPlugin;
-use debug::DebugPlugin;
 use tilemap::TileMapPlugin;
 use ascii::AsciiPlugin;
+use combat::CombatPlugin;
+use debug::DebugPlugin;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
 pub enum GameState {
@@ -36,6 +38,7 @@ fn main() {
     .add_plugin(PlayerPlugin)
     .add_plugin(AsciiPlugin)
     .add_plugin(TileMapPlugin)
+    .add_plugin(CombatPlugin)
     .add_plugin(DebugPlugin)
     .run();
 }
