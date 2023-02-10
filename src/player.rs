@@ -1,9 +1,10 @@
 use bevy::{prelude::*, sprite::{SpriteSheetBundle, TextureAtlasSprite}};
-use crate::{AsciiSheet, TILE_SIZE};
+use bevy_inspector_egui::Inspectable;
+use crate::{TILE_SIZE, ascii::{spawn_ascii_sprite, AsciiSheet}};
 
 pub struct PlayerPlugin;
 
-#[derive(Component)]
+#[derive(Component, Inspectable)]
 pub struct Player {
     speed: f32,
 }
@@ -37,41 +38,37 @@ fn player_movement(
         transform.translation.x -= player.speed * TILE_SIZE * time.delta_seconds();
     }
 }
+
 fn spawn_player(mut commands: Commands, ascii: Res<AsciiSheet>) {
 
     /* Creates player */
-    let mut sprite = TextureAtlasSprite::new(1);
-    sprite.color = Color::rgb(0.3, 0.3, 0.9);
-    sprite.custom_size = Some(Vec2::splat(TILE_SIZE));
-
-    let player = commands.spawn_bundle(SpriteSheetBundle {
-        sprite: sprite,
-        texture_atlas: ascii.0.clone(),
-        transform: Transform { 
-            translation: Vec3::new(0.0, 0.0, 900.0),
-            ..Default::default() 
-        },
-        ..Default::default()
-    }).insert(Name::new("Player"))
-    .insert(Player {
-        speed: 3.0
-    })
-    .id(); 
+    let player = spawn_ascii_sprite(
+        &mut commands,
+        &ascii, 
+        1, 
+        Color::rgb(0.3, 0.3, 0.9), 
+        Vec3::new(0.0, 0.0, 900.0),
+    );
     
-    /* Creates background */
-    let mut background_sprite = TextureAtlasSprite::new(0);
-    background_sprite.color = Color::rgb(0.5, 0.5, 0.5);
-    background_sprite.custom_size = Some(Vec2::splat(TILE_SIZE));
+    commands
+        .entity(player)
+        .insert(Name::new("Player"))
+        .insert(Player { speed: 3.0 })
+        .id();
 
-    let background = commands.spawn_bundle(SpriteSheetBundle {
-        sprite: background_sprite,
-        texture_atlas: ascii.0.clone(),
-        transform: Transform { 
-            translation: Vec3::new(0.0, 0.0, -1.0),
-            ..Default::default() 
-        },
-        ..Default::default()
-    }).insert(Name::new("Background")).id();
+    /* Creates background */
+    let background = spawn_ascii_sprite(
+        &mut commands, 
+        &ascii, 
+        0, 
+        Color::rgb(0.5, 0.5, 0.5), 
+        Vec3::new(0.0, 0.0, -1.0)
+    );
+
+    commands
+        .entity(background)
+        .insert(Name::new("Background"))
+        .id();
 
     commands.entity(player).push_children(&[background]);
 }
