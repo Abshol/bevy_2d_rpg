@@ -6,11 +6,13 @@ pub const RESOLUTION: f32 = 16.0 / 9.0;
 pub const TILE_SIZE: f32 = 0.1;
 
 mod player;
-mod debug;
 mod ascii;
+mod tilemap;
+mod debug;
 use player::PlayerPlugin;
-use ascii::AsciiPlugin;
 use debug::DebugPlugin;
+use tilemap::TileMapPlugin;
+use ascii::AsciiPlugin;
 
 fn main() {
     App::new()
@@ -27,6 +29,7 @@ fn main() {
     .add_plugins(DefaultPlugins)
     .add_plugin(PlayerPlugin)
     .add_plugin(AsciiPlugin)
+    .add_plugin(TileMapPlugin)
     .add_plugin(DebugPlugin)
     .run();
 }
