@@ -3,8 +3,12 @@ use bevy::{prelude::*, render::{camera::ScalingMode, render_resource::Texture}, 
 
 pub const CLEAR: Color = Color::rgb(0.1, 0.1, 0.1);
 pub const RESOLUTION: f32 = 16.0 / 9.0;
+pub const TILE_SIZE: f32 = 0.1;
+
 mod player;
+mod debug;
 use player::PlayerPlugin;
+use debug::DebugPlugin;
 
 fn main() {
     App::new()
@@ -21,6 +25,7 @@ fn main() {
     .add_startup_system_to_stage(StartupStage::PreStartup, load_ascii)
     .add_plugins(DefaultPlugins)
     .add_plugin(PlayerPlugin)
+    .add_plugin(DebugPlugin)
     .run();
 }
 
