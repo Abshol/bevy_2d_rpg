@@ -9,11 +9,14 @@ mod player;
 mod ascii;
 mod tilemap;
 mod combat;
+mod fadeout;
 mod debug;
+
 use player::PlayerPlugin;
 use tilemap::TileMapPlugin;
 use ascii::AsciiPlugin;
 use combat::CombatPlugin;
+use fadeout::FadeoutPlugin;
 use debug::DebugPlugin;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
@@ -39,6 +42,7 @@ fn main() {
     .add_plugin(AsciiPlugin)
     .add_plugin(TileMapPlugin)
     .add_plugin(CombatPlugin)
+    .add_plugin(FadeoutPlugin)
     .add_plugin(DebugPlugin)
     .run();
 }
