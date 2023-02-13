@@ -23,7 +23,7 @@ pub struct CombatStats {
 #[derive(Component)]
 pub struct Enemy;
 
-struct FightEvent {
+pub(crate) struct FightEvent {
     target: Entity,
     damage_amount: isize,
     next_state: CombatState,

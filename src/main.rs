@@ -10,6 +10,7 @@ mod ascii;
 mod tilemap;
 mod combat;
 mod fadeout;
+mod audio;
 mod debug;
 
 use player::PlayerPlugin;
@@ -17,6 +18,7 @@ use tilemap::TileMapPlugin;
 use ascii::AsciiPlugin;
 use combat::CombatPlugin;
 use fadeout::FadeoutPlugin;
+use audio::GameAudioPlugin;
 use debug::DebugPlugin;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
@@ -40,6 +42,7 @@ fn main() {
     .add_plugins(DefaultPlugins)
     .add_plugin(PlayerPlugin)
     .add_plugin(AsciiPlugin)
+    .add_plugin(GameAudioPlugin)
     .add_plugin(TileMapPlugin)
     .add_plugin(CombatPlugin)
     .add_plugin(FadeoutPlugin)
