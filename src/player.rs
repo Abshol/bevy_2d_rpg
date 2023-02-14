@@ -1,6 +1,6 @@
-use bevy::{prelude::*, sprite::{SpriteSheetBundle, TextureAtlasSprite, collide_aabb::collide}};
+use bevy::{prelude::*, sprite::{SpriteSheetBundle, TextureAtlasSprite, collide_aabb::collide}, render::camera::Camera2d};
 use bevy_inspector_egui::Inspectable;
-use crate::{TILE_SIZE, ascii::{spawn_ascii_sprite, AsciiSheet}, tilemap::{TileCollider, EncounterSpawner}, GameState, fadeout::create_fadeout, combat::CombatStats, MainCamera};
+use crate::{TILE_SIZE, ascii::{spawn_ascii_sprite, AsciiSheet}, tilemap::{TileCollider, EncounterSpawner}, GameState, fadeout::create_fadeout, combat::CombatStats, MainCamera, graphics::{FrameAnimation, PlayerGraphics, FacingDirection, CharacterSheet}};
 use rand::prelude::*;
 
 pub struct PlayerPlugin;
@@ -19,6 +19,21 @@ pub struct Player {
     pub exp: usize,
 }
 
+impl Player{
+    pub fn give_exp(&mut self, exp: usize, stats: &mut CombatStats) -> bool {
+        self.exp += exp;
+        if self.exp >= 50 {
+            stats.health += 2;
+            stats.max_health += 2;
+            stats.attack += 2;
+            stats.defense += 2;
+            stats.health += 2;
+            self.exp -= 50;
+            return true;
+        }
+        false
+    }
+}
 
 impl Plugin for PlayerPlugin {
     fn build (&self, app:&mut App) {
@@ -30,9 +45,9 @@ impl Plugin for PlayerPlugin {
             SystemSet::on_pause(GameState::Overworld).with_system(hide_player)
         )
         .add_system_set(SystemSet::on_update(GameState::Overworld)
-            .with_system(player_encounter_checking.after("movement"))
-            .with_system(camera_follow.after("movement"))
-            .with_system(player_movement.label("movement")),
+            .with_system(player_encounter_checking.after(player_movement))
+            .with_system(camera_follow.after(player_movement))
+            .with_system(player_movement),
         )
         .add_system_set(SystemSet::on_enter(GameState::Overworld).with_system(spawn_player));
     }
@@ -75,7 +90,7 @@ fn show_player(
 
 fn camera_follow (
     player_query: Query<&Transform, With<Player>>,
-    mut camera_query: Query<&mut Transform, (Without<Player>, With<MainCamera>)>
+    mut camera_query: Query<&mut Transform, (Without<Player>, With<Camera2d>)>
 ) {
     let player_transform = player_query.single();
     let mut camera_transform = camera_query.single_mut();
@@ -85,16 +100,20 @@ fn camera_follow (
 }
 
 fn player_movement(
-    mut player_query: Query<(&mut Player, &mut Transform)>,
+    mut player_query: Query<(&mut Player, &mut Transform, &mut PlayerGraphics)>,
     wall_query: Query<&Transform, (With<TileCollider>,Without<Player>)>,
     keyboard: Res<Input<KeyCode>>,
     time: Res<Time>,
 ) {
-    let (mut player, mut transform) = player_query.single_mut();
+    let (mut player, mut transform, mut graphics) = player_query.single_mut();
     player.just_moved = false;
+
+
+
     if !player.active {
         return
     }
+
     let mut y_delta = 0.0;
     if keyboard.pressed(KeyCode::W) {
         y_delta += player.speed * TILE_SIZE * time.delta_seconds();
@@ -111,17 +130,6 @@ fn player_movement(
         x_delta -= player.speed * TILE_SIZE * time.delta_seconds();
     }
 
-    let target = transform.translation + Vec3::new(x_delta, 0.0, 0.0);
-    if !wall_query
-        .iter()
-        .any(|&transform| wall_collision_check(target, transform.translation)) 
-    {
-        if x_delta != 0.0 {
-            player.just_moved = true;
-        }
-        transform.translation = target;
-    }
-
     let target = transform.translation + Vec3::new(0.0, y_delta, 0.0);
     if !wall_query
         .iter()
@@ -129,10 +137,32 @@ fn player_movement(
     {
         if y_delta != 0.0 {
             player.just_moved = true;
+            if y_delta > 0.0 {
+                graphics.facing = FacingDirection::Up;
+            } else {
+                graphics.facing = FacingDirection::Down;
+            }
+        } 
+        transform.translation = target;
+    }
+
+    let target = transform.translation + Vec3::new(x_delta, 0.0, 0.0);
+    if !wall_query
+        .iter()
+        .any(|&transform| wall_collision_check(target, transform.translation)) 
+    {
+        if x_delta != 0.0 {
+            player.just_moved = true;
+            if x_delta > 0.0 {
+                graphics.facing = FacingDirection::Right;
+            } else {
+                graphics.facing = FacingDirection::Left;
+            }
         }
         transform.translation = target;
     }
 }
+
 
 fn wall_collision_check(
     target_player_pos: Vec3,
@@ -169,20 +199,37 @@ fn player_encounter_checking(
         }
 }
 
-fn spawn_player(mut commands: Commands, ascii: Res<AsciiSheet>) {
+fn spawn_player(mut commands: Commands, characters: Res<CharacterSheet>) {
 
-    /* Creates player */
-    let player = spawn_ascii_sprite(
-        &mut commands,
-        &ascii, 
-        1, 
-        Color::rgb(0.3, 0.3, 0.9), 
-        Vec3::new(2.0 * TILE_SIZE, -2.0 * TILE_SIZE, 900.0),
-        Vec3::splat(1.0)
-    );
+    // /* Creates player ascii sprite */
+    // let player = spawn_ascii_sprite(
+    //     &mut commands,
+    //     &ascii, 
+    //     1, 
+    //     Color::rgb(0.3, 0.3, 0.9), 
+    //     Vec3::new(2.0 * TILE_SIZE, -2.0 * TILE_SIZE, 900.0),
+    //     Vec3::splat(1.0)
+    // );
 
     commands
-        .entity(player)
+        .spawn_bundle(SpriteSheetBundle {
+            sprite: TextureAtlasSprite {
+                index: characters.player_down[0],
+                custom_size: Some(Vec2::splat(TILE_SIZE)),
+                ..default()
+            },
+            transform: Transform::from_xyz(2.0 * TILE_SIZE, -2.0 * TILE_SIZE, 900.0),
+            texture_atlas: characters.handle.clone(),
+            ..default()
+        })
+        .insert(FrameAnimation {
+            timer: Timer::from_seconds(0.2, true),
+            frames: characters.player_down.to_vec(),
+            current_frame: 0,
+        })
+        .insert(PlayerGraphics {
+            facing:FacingDirection::Down,
+        })
         .insert(Name::new("Player"))
         .insert(Player { 
             speed: 3.0, 
@@ -196,23 +243,20 @@ fn spawn_player(mut commands: Commands, ascii: Res<AsciiSheet>) {
             attack: 2,
             defense: 1,
         })
-        .insert(EncounterTracker{ timer: Timer::from_seconds(thread_rng().gen_range(0.0..=6.0), true)})
-        .id();
+        .insert(EncounterTracker{ timer: Timer::from_seconds(thread_rng().gen_range(0.0..=6.0), true)});
 
-    /* Creates background */
-    let background = spawn_ascii_sprite(
-        &mut commands, 
-        &ascii, 
-        0, 
-        Color::rgb(0.5, 0.5, 0.5), 
-        Vec3::new(0.0, 0.0, -1.0),
-        Vec3::splat(1.0)
-    );
-
-    commands
-        .entity(background)
-        .insert(Name::new("Background"))
-        .id();
-
-    commands.entity(player).push_children(&[background]);
+    // /* Creates background ascii OLD */
+    // let background = spawn_ascii_sprite(
+    //     &mut commands, 
+    //     &ascii, 
+    //     0, 
+    //     Color::rgb(0.5, 0.5, 0.5), 
+    //     Vec3::new(0.0, 0.0, -1.0),
+    //     Vec3::splat(1.0)
+    // );
+    // commands
+    //     .entity(background)
+    //     .insert(Name::new("Background"))
+    //     .id();
+    // commands.entity(player).push_children(&[background]);
 }

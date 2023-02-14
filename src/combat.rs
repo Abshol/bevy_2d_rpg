@@ -1,5 +1,6 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, render::camera::Camera2d};
 use bevy_inspector_egui::Inspectable;
+use rand::{thread_rng, Rng};
 
 use crate::{
     ascii::{
@@ -7,8 +8,9 @@ use crate::{
         NineSliceIndices,
     },
     fadeout::create_fadeout,
+    graphics::{CharacterSheet, spawn_enemy_sprite},
     player::Player,
-    GameState, RESOLUTION, TILE_SIZE, graphics::{CharacterSheet, spawn_bat_sprite}, MainCamera,
+    GameState, RESOLUTION, TILE_SIZE,
 };
 
 #[derive(Component, Inspectable)]
@@ -21,7 +23,15 @@ pub struct CombatStats {
 }
 
 #[derive(Component)]
-pub struct Enemy;
+pub struct Enemy {
+    enemy_type: EnemyType,
+}
+
+#[derive(Clone, Copy)]
+pub enum EnemyType {
+    Bat,
+    Ghost,
+}
 
 pub(crate) struct FightEvent {
     target: Entity,
@@ -114,11 +124,14 @@ fn handle_accepting_reward(
 fn give_reward(
     mut commands: Commands,
     ascii: Res<AsciiSheet>,
-    mut player_query: Query<&mut Player>,
+    mut player_query: Query<(&mut Player, &mut CombatStats)>,
     mut keyboard: ResMut<Input<KeyCode>>,
 ) {
     keyboard.clear();
-    let exp_reward = 10;
+    let exp_reward = match enemy_query.single().enemy_type {
+        EnemyType::Bat => 10,
+        EnemyType::Ghost => 30,
+    };
     let reward_text = format!("Earned: {} exp", exp_reward);
     let text = spawn_ascii_text(
         &mut commands,
@@ -127,7 +140,21 @@ fn give_reward(
         Vec3::new(-((reward_text.len() /2) as f32 * TILE_SIZE), 0.0, 0.0)
     );
     commands.entity(text).insert(CombatText);
-    player_query.single_mut().exp += exp_reward;
+    let (mut player, mut stats) = player_query.single_mut();
+    if player.give_exp(exp_reward, &mut stats) {
+        let level_text = "Level up !";
+        let text = spawn_ascii_text(
+            &mut commands,
+            &ascii,
+            level_text,
+            Vec3::new(
+                -((level_text.len()/2) as f32 * TILE_SIZE),
+                -1.5 * TILE_SIZE,
+                0.0,
+            ),
+        );
+        commands.entity(text).insert(CombatText);
+    }
 }
 
 fn despawn_all_combat_text(
@@ -411,7 +438,7 @@ fn combat_input(
 
 fn combat_camera(
     mut camera_query: Query<&mut Transform,
-    With<MainCamera>>,
+    With<Camera2d>>,
     attack_fx: Res<AttackEffects>
 ) {
     let mut camera_transform = camera_query.single_mut();
@@ -420,30 +447,59 @@ fn combat_camera(
 }
 
 fn spawn_enemy(mut commands: Commands, ascii: Res<AsciiSheet>, characters: Res<CharacterSheet>) {
-    let enemy_health = 3;
+    let enemy_type = match rand::random::<f32>() {
+        x if x < 0.5 => EnemyType::Bat,
+        _ => EnemyType::Ghost,
+    };
+    let stats = match enemy_type {
+        EnemyType::Bat => {
+            let mut health = thread_rng().gen_range(1..=6);
+            let mut attack = thread_rng().gen_range(1..=3);
+            let mut defense = thread_rng().gen_range(1..=2);
+
+            CombatStats {
+                health: health,
+                max_health: health,
+                attack: attack,
+                defense: defense
+            }
+        }
+        EnemyType::Ghost => {
+            let mut health = thread_rng().gen_range(5..=10);
+            let mut attack = thread_rng().gen_range(3..=6);
+            let mut defense = thread_rng().gen_range(2..=4);
+
+            CombatStats {
+                health: health,
+                max_health: health,
+                attack: attack,
+                defense: defense
+            }
+        }
+    };
+
     let health_text = spawn_ascii_text(
         &mut commands,
         &ascii,
-        &format!("Health: {}", enemy_health as usize),
+        &format!("Health: {}", stats.health as usize),
         //relative to enemy pos
         Vec3::new(-4.5 * TILE_SIZE, 2.0 * TILE_SIZE, 100.0),
     );
     commands.entity(health_text).insert(CombatText);
 
-    let sprite = spawn_bat_sprite(
+    let sprite = spawn_enemy_sprite(
         &mut commands,
         &characters,
         Vec3::new(0.0, -0.1, 100.0),
+        enemy_type,
     );
+
     commands
         .entity(sprite)
-        .insert(Enemy)
-        .insert(CombatStats {
-            health: enemy_health,
-            max_health: enemy_health,
-            attack: 2,
-            defense: 1,
+        .insert(Enemy {
+            enemy_type
         })
+        .insert(stats)
         .insert(Name::new("Bat"))
         .add_child(health_text);
 }
