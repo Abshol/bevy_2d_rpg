@@ -25,10 +25,16 @@ impl Plugin for GameAudioPlugin {
         app.add_plugin(AudioPlugin)
             .add_startup_system_to_stage(StartupStage::PreStartup, load_audio)
             .add_system_set(SystemSet::on_enter(GameState::Combat).with_system(start_combat_music))
-            .add_system_set(SystemSet::on_exit(GameState::Combat).with_system(resume_bgm_music))
+            .add_system_set(SystemSet::on_enter(GameState::Overworld).with_system(resume_bgm_music))
+            .add_system_set(SystemSet::on_enter(CombatState::Reward).with_system(play_reward_sfx))
+            .add_system(play_hit_fx)
             .add_system(volume_control)
             .add_startup_system(start_bgm_music);
     }
+}
+
+fn play_reward_sfx(audio: Res<Audio>, audio_state: Res<AudioState>) {
+    audio.play_in_channel(audio_state.reward_handle.clone(), &audio_state.sfx_channel);
 }
 
 fn play_hit_fx(audio: Res<Audio>, audio_state: Res<AudioState>, mut fight_event: EventReader<FightEvent>) {
@@ -47,7 +53,10 @@ fn start_combat_music(
     audio_state: Res<AudioState>
 ) {
     audio.pause_channel(&audio_state.bgm_channel);
-    audio.play_looped_in_channel(audio_state.combat_handle.clone(), &audio_state.bgm_channel);
+    audio.play_looped_in_channel(
+        audio_state.combat_handle.clone(), 
+        &audio_state.combat_channel
+    );
 }
 
 fn start_bgm_music(audio: Res<Audio>, audio_state: Res<AudioState>) {

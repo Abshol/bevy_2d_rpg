@@ -15,6 +15,7 @@ pub struct Player {
     speed: f32,
     active: bool,
     just_moved: bool,
+    pub exp: usize,
 }
 
 
@@ -181,7 +182,12 @@ fn spawn_player(mut commands: Commands, ascii: Res<AsciiSheet>) {
     commands
         .entity(player)
         .insert(Name::new("Player"))
-        .insert(Player { speed: 3.0, active: true, just_moved: false})
+        .insert(Player { 
+            speed: 3.0, 
+            active: true, 
+            just_moved: false, 
+            exp: 0,
+        })
         .insert(CombatStats {
             health: 10,
             max_health: 10,
