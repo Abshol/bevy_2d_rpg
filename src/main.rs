@@ -12,6 +12,8 @@ mod combat;
 mod fadeout;
 mod audio;
 mod graphics;
+mod start_menu;
+mod npc;
 mod debug;
 
 use player::PlayerPlugin;
@@ -21,16 +23,20 @@ use combat::CombatPlugin;
 use fadeout::FadeoutPlugin;
 use audio::GameAudioPlugin;
 use graphics::GraphicsPlugin;
+use start_menu::MainMenuPlugin;
+use npc::NpcPlugin;
 use debug::DebugPlugin;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
 pub enum GameState {
+    StartMenu,
     Overworld,
     Combat,
 }
+
 fn main() {
     App::new()
-    .add_state(GameState::Overworld)
+    .add_state(GameState::StartMenu)
     .insert_resource(ClearColor(CLEAR))
     .insert_resource(WindowDescriptor {
         width : 1600.0,
@@ -49,10 +55,14 @@ fn main() {
     .add_plugin(CombatPlugin)
     .add_plugin(FadeoutPlugin)
     .add_plugin(GraphicsPlugin)
+    .add_plugin(MainMenuPlugin)
+    .add_plugin(NpcPlugin)
     .add_plugin(DebugPlugin)
     .run();
 }
 
+#[derive(Component)]
+pub struct MainCamera;
 fn spawn_camera(mut commands: Commands) {
     let mut camera = OrthographicCameraBundle::new_2d();
 
@@ -64,5 +74,5 @@ fn spawn_camera(mut commands: Commands) {
 
     camera.orthographic_projection.scaling_mode = ScalingMode::None;
 
-    commands.spawn_bundle(camera);
+    commands.spawn_bundle(camera).insert(MainCamera);
 }

@@ -8,7 +8,7 @@ use crate::{
     },
     fadeout::create_fadeout,
     player::Player,
-    GameState, RESOLUTION, TILE_SIZE, graphics::{CharacterSheet, spawn_bat_sprite},
+    GameState, RESOLUTION, TILE_SIZE, graphics::{CharacterSheet, spawn_bat_sprite}, MainCamera,
 };
 
 #[derive(Component, Inspectable)]
@@ -85,6 +85,7 @@ impl Plugin for CombatPlugin {
             .add_system_set(
                 SystemSet::on_exit(GameState::Combat)
                     .with_system(despawn_all_combat_text)
+                    .with_system(despawn_enemy)
                     .with_system(despawn_menu),
             )
             .add_system_set(
@@ -102,9 +103,11 @@ fn handle_accepting_reward(
     mut commands: Commands,
     ascii: Res<AsciiSheet>,
     keyboard: Res<Input<KeyCode>>,
+    mut combat_state: ResMut<State<CombatState>>,
 ) {
     if keyboard.just_pressed(KeyCode::E) {
-        create_fadeout(&mut commands, GameState::Overworld, & ascii);
+        combat_state.set(CombatState::Exiting).unwrap();
+        create_fadeout(&mut commands, None, & ascii);
     }
 }
 
@@ -399,7 +402,7 @@ fn combat_input(
                 next_state: CombatState::PlayerAttack,
             }),
             CombatMenuOption::Run => {
-                create_fadeout(&mut commands, GameState::Overworld, &ascii);
+                create_fadeout(&mut commands, None, &ascii);
                 combat_state.set(CombatState::Exiting).unwrap()
             }
         }
@@ -408,7 +411,7 @@ fn combat_input(
 
 fn combat_camera(
     mut camera_query: Query<&mut Transform,
-    With<Camera>>,
+    With<MainCamera>>,
     attack_fx: Res<AttackEffects>
 ) {
     let mut camera_transform = camera_query.single_mut();

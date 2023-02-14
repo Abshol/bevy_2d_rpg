@@ -1,6 +1,7 @@
 use bevy::{prelude::*, sprite::{SpriteSheetBundle, TextureAtlasSprite, collide_aabb::collide}};
 use bevy_inspector_egui::Inspectable;
-use crate::{TILE_SIZE, ascii::{spawn_ascii_sprite, AsciiSheet}, tilemap::{TileCollider, EncounterSpawner}, GameState, fadeout::create_fadeout, combat::CombatStats};
+use crate::{TILE_SIZE, ascii::{spawn_ascii_sprite, AsciiSheet}, tilemap::{TileCollider, EncounterSpawner}, GameState, fadeout::create_fadeout, combat::CombatStats, MainCamera};
+use rand::prelude::*;
 
 pub struct PlayerPlugin;
 
@@ -13,7 +14,7 @@ pub struct EncounterTracker {
 #[derive(Component, Inspectable)]
 pub struct Player {
     speed: f32,
-    active: bool,
+    pub active: bool,
     just_moved: bool,
     pub exp: usize,
 }
@@ -23,17 +24,17 @@ impl Plugin for PlayerPlugin {
     fn build (&self, app:&mut App) {
         app
         .add_system_set(
-            SystemSet::on_enter(GameState::Overworld).with_system(show_player)
+            SystemSet::on_resume(GameState::Overworld).with_system(show_player)
         )
         .add_system_set(
-            SystemSet::on_exit(GameState::Overworld).with_system(hide_player)
+            SystemSet::on_pause(GameState::Overworld).with_system(hide_player)
         )
         .add_system_set(SystemSet::on_update(GameState::Overworld)
             .with_system(player_encounter_checking.after("movement"))
             .with_system(camera_follow.after("movement"))
             .with_system(player_movement.label("movement")),
         )
-        .add_startup_system(spawn_player);
+        .add_system_set(SystemSet::on_enter(GameState::Overworld).with_system(spawn_player));
     }
 }
 
@@ -74,7 +75,7 @@ fn show_player(
 
 fn camera_follow (
     player_query: Query<&Transform, With<Player>>,
-    mut camera_query: Query<&mut Transform, (Without<Player>, With<Camera>)>
+    mut camera_query: Query<&mut Transform, (Without<Player>, With<MainCamera>)>
 ) {
     let player_transform = player_query.single();
     let mut camera_transform = camera_query.single_mut();
@@ -162,7 +163,8 @@ fn player_encounter_checking(
             encounter_tracker.timer.tick(time.delta());
             if encounter_tracker.timer.just_finished() {
                 player.active = false;
-                create_fadeout(&mut commands, GameState::Combat, &ascii);
+                encounter_tracker.timer = Timer::from_seconds(thread_rng().gen_range(1.0..=6.0), true);
+                create_fadeout(&mut commands, Some(GameState::Combat), &ascii);
             }
         }
 }
@@ -178,7 +180,7 @@ fn spawn_player(mut commands: Commands, ascii: Res<AsciiSheet>) {
         Vec3::new(2.0 * TILE_SIZE, -2.0 * TILE_SIZE, 900.0),
         Vec3::splat(1.0)
     );
-    
+
     commands
         .entity(player)
         .insert(Name::new("Player"))
@@ -194,7 +196,7 @@ fn spawn_player(mut commands: Commands, ascii: Res<AsciiSheet>) {
             attack: 2,
             defense: 1,
         })
-        .insert(EncounterTracker{ timer: Timer::from_seconds(1.0, true)})
+        .insert(EncounterTracker{ timer: Timer::from_seconds(thread_rng().gen_range(0.0..=6.0), true)})
         .id();
 
     /* Creates background */

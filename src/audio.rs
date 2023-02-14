@@ -5,6 +5,7 @@ use crate::combat::{CombatState};
 use crate::GameState;
 use crate::combat::FightEvent;
 
+
 pub struct GameAudioPlugin;
 
 pub struct AudioState {
@@ -13,6 +14,8 @@ pub struct AudioState {
     hit1_handle: Handle<AudioSource>,
     hit2_handle: Handle<AudioSource>,
     reward_handle: Handle<AudioSource>,
+    mainmenu_handle: Handle<AudioSource>,
+    buttonclic_handle: Handle<AudioSource>,
 
     bgm_channel: AudioChannel,
     combat_channel: AudioChannel,
@@ -24,13 +27,19 @@ impl Plugin for GameAudioPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(AudioPlugin)
             .add_startup_system_to_stage(StartupStage::PreStartup, load_audio)
+            .add_system_set(SystemSet::on_enter(GameState::StartMenu).with_system(start_menu_music))
+            .add_system_set(SystemSet::on_pause(GameState::StartMenu).with_system(play_click_sfx).with_system(start_bgm_music))
             .add_system_set(SystemSet::on_enter(GameState::Combat).with_system(start_combat_music))
+            .add_system_set(SystemSet::on_exit(GameState::Combat).with_system(resume_bgm_music))
             .add_system_set(SystemSet::on_enter(GameState::Overworld).with_system(resume_bgm_music))
             .add_system_set(SystemSet::on_enter(CombatState::Reward).with_system(play_reward_sfx))
             .add_system(play_hit_fx)
-            .add_system(volume_control)
-            .add_startup_system(start_bgm_music);
+            .add_system(volume_control);
     }
+}
+
+fn play_click_sfx(audio: Res<Audio>, audio_state: Res<AudioState>) {
+    audio.play_in_channel(audio_state.buttonclic_handle.clone(), &audio_state.sfx_channel);
 }
 
 fn play_reward_sfx(audio: Res<Audio>, audio_state: Res<AudioState>) {
@@ -60,8 +69,16 @@ fn start_combat_music(
 }
 
 fn start_bgm_music(audio: Res<Audio>, audio_state: Res<AudioState>) {
+    audio.stop_channel(&audio_state.bgm_channel);
     audio.play_looped_in_channel(
         audio_state.bgm_handle.clone(),
+        &audio_state.bgm_channel
+    );
+}
+
+fn start_menu_music(audio: Res<Audio>, audio_state: Res<AudioState>) {
+    audio.play_looped_in_channel(
+        audio_state.mainmenu_handle.clone(),
         &audio_state.bgm_channel
     );
 }
@@ -86,11 +103,14 @@ fn load_audio(
     audio: Res<Audio>,
     assets: Res<AssetServer>
 ) {
-    let bgm_handle = assets.load("audio/bip-bop.ogg");
-    let combat_handle = assets.load("audio/Of Far Different Nature - 0 to 100 (CC-BY).ogg");
-    let hit1_handle = assets.load("audio/Hit_hurt 1.wav");
-    let hit2_handle = assets.load("audio/Hit_hurt 2.wav");
-    let reward_handle = assets.load("audio/Powerup 2.wav");
+    let bgm_handle = assets.load("audio/music/deepwater-ruins.ogg");
+    let combat_handle = assets.load("audio/music/Of Far Different Nature - 0 to 100 (CC-BY).ogg");
+    let mainmenu_handle = assets.load("audio/music/bip-bop.ogg");
+    let hit1_handle = assets.load("audio/sfx/Hit_hurt 1.wav");
+    let hit2_handle = assets.load("audio/sfx/Hit_hurt 2.wav");
+    let reward_handle = assets.load("audio/sfx/Powerup.wav");
+    let buttonclic_handle = assets.load("audio/sfx/Button_clic.wav");
+
     let bgm_channel= AudioChannel::new("bgm".to_string());
     let combat_channel= AudioChannel::new("combat".to_string());
     let sfx_channel= AudioChannel::new("sfx".to_string());
@@ -106,6 +126,9 @@ fn load_audio(
         hit1_handle: hit1_handle,
         hit2_handle: hit2_handle,
         reward_handle: reward_handle,
+        mainmenu_handle: mainmenu_handle,
+        buttonclic_handle: buttonclic_handle,
+
         bgm_channel,
         combat_channel,
         sfx_channel,

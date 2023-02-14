@@ -55,7 +55,7 @@ impl GraphicsPlugin {
         assets: Res<AssetServer>,
         mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     ) {
-        let image = assets.load("graphics/characters.png");
+        let image = assets.load("graphics/sprites/characters.png");
         let atlas = TextureAtlas::from_grid_with_padding(
             image,
             Vec2::splat(16.0),
