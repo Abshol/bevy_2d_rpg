@@ -1,6 +1,17 @@
-use bevy::{prelude::*, sprite::{SpriteSheetBundle, TextureAtlasSprite, collide_aabb::collide}, render::camera::Camera2d};
+use crate::{
+    ascii::{spawn_ascii_sprite, AsciiSheet},
+    combat::CombatStats,
+    fadeout::create_fadeout,
+    graphics::{CharacterSheet, FacingDirection, FrameAnimation, PlayerGraphics},
+    tilemap::{EncounterSpawner, TileCollider},
+    GameState, MainCamera, TILE_SIZE,
+};
+use bevy::{
+    prelude::*,
+    render::camera::Camera2d,
+    sprite::{collide_aabb::collide, SpriteSheetBundle, TextureAtlasSprite},
+};
 use bevy_inspector_egui::Inspectable;
-use crate::{TILE_SIZE, ascii::{spawn_ascii_sprite, AsciiSheet}, tilemap::{TileCollider, EncounterSpawner}, GameState, fadeout::create_fadeout, combat::CombatStats, MainCamera, graphics::{FrameAnimation, PlayerGraphics, FacingDirection, CharacterSheet}};
 use rand::prelude::*;
 
 pub struct PlayerPlugin;
@@ -19,7 +30,7 @@ pub struct Player {
     pub exp: usize,
 }
 
-impl Player{
+impl Player {
     pub fn give_exp(&mut self, exp: usize, stats: &mut CombatStats) -> bool {
         self.exp += exp;
         if self.exp >= 50 {
@@ -36,20 +47,16 @@ impl Player{
 }
 
 impl Plugin for PlayerPlugin {
-    fn build (&self, app:&mut App) {
-        app
-        .add_system_set(
-            SystemSet::on_resume(GameState::Overworld).with_system(show_player)
-        )
-        .add_system_set(
-            SystemSet::on_pause(GameState::Overworld).with_system(hide_player)
-        )
-        .add_system_set(SystemSet::on_update(GameState::Overworld)
-            .with_system(player_encounter_checking.after(player_movement))
-            .with_system(camera_follow.after(player_movement))
-            .with_system(player_movement),
-        )
-        .add_system_set(SystemSet::on_enter(GameState::Overworld).with_system(spawn_player));
+    fn build(&self, app: &mut App) {
+        app.add_system_set(SystemSet::on_resume(GameState::Overworld).with_system(show_player))
+            .add_system_set(SystemSet::on_pause(GameState::Overworld).with_system(hide_player))
+            .add_system_set(
+                SystemSet::on_update(GameState::Overworld)
+                    .with_system(player_encounter_checking.after(player_movement))
+                    .with_system(camera_follow.after(player_movement))
+                    .with_system(player_movement),
+            )
+            .add_system_set(SystemSet::on_enter(GameState::Overworld).with_system(spawn_player));
     }
 }
 
@@ -88,9 +95,9 @@ fn show_player(
     }
 }
 
-fn camera_follow (
+fn camera_follow(
     player_query: Query<&Transform, With<Player>>,
-    mut camera_query: Query<&mut Transform, (Without<Player>, With<Camera2d>)>
+    mut camera_query: Query<&mut Transform, (Without<Player>, With<Camera2d>)>,
 ) {
     let player_transform = player_query.single();
     let mut camera_transform = camera_query.single_mut();
@@ -101,17 +108,15 @@ fn camera_follow (
 
 fn player_movement(
     mut player_query: Query<(&mut Player, &mut Transform, &mut PlayerGraphics)>,
-    wall_query: Query<&Transform, (With<TileCollider>,Without<Player>)>,
+    wall_query: Query<&Transform, (With<TileCollider>, Without<Player>)>,
     keyboard: Res<Input<KeyCode>>,
     time: Res<Time>,
 ) {
     let (mut player, mut transform, mut graphics) = player_query.single_mut();
     player.just_moved = false;
 
-
-
     if !player.active {
-        return
+        return;
     }
 
     let mut y_delta = 0.0;
@@ -133,7 +138,7 @@ fn player_movement(
     let target = transform.translation + Vec3::new(0.0, y_delta, 0.0);
     if !wall_query
         .iter()
-        .any(|&transform| wall_collision_check(target, transform.translation)) 
+        .any(|&transform| wall_collision_check(target, transform.translation))
     {
         if y_delta != 0.0 {
             player.just_moved = true;
@@ -142,14 +147,14 @@ fn player_movement(
             } else {
                 graphics.facing = FacingDirection::Down;
             }
-        } 
+        }
         transform.translation = target;
     }
 
     let target = transform.translation + Vec3::new(x_delta, 0.0, 0.0);
     if !wall_query
         .iter()
-        .any(|&transform| wall_collision_check(target, transform.translation)) 
+        .any(|&transform| wall_collision_check(target, transform.translation))
     {
         if x_delta != 0.0 {
             player.just_moved = true;
@@ -163,18 +168,14 @@ fn player_movement(
     }
 }
 
-
-fn wall_collision_check(
-    target_player_pos: Vec3,
-    wall_transform: Vec3
-) -> bool {
+fn wall_collision_check(target_player_pos: Vec3, wall_transform: Vec3) -> bool {
     let collision = collide(
         target_player_pos,
         Vec2::splat(TILE_SIZE * 0.9),
         wall_transform,
-        Vec2::splat(TILE_SIZE)
+        Vec2::splat(TILE_SIZE),
     );
-    return collision.is_some()
+    return collision.is_some();
 }
 
 fn player_encounter_checking(
@@ -187,26 +188,27 @@ fn player_encounter_checking(
 ) {
     let (mut player, mut encounter_tracker, player_transform) = player_query.single_mut();
     let player_translation = player_transform.translation;
-    if player.just_moved && encounter_query
-        .iter()
-        .any(|&transform| wall_collision_check(player_translation, transform.translation)) {
-            encounter_tracker.timer.tick(time.delta());
-            if encounter_tracker.timer.just_finished() {
-                player.active = false;
-                encounter_tracker.timer = Timer::from_seconds(thread_rng().gen_range(1.0..=6.0), true);
-                create_fadeout(&mut commands, Some(GameState::Combat), &ascii);
-            }
+    if player.just_moved
+        && encounter_query
+            .iter()
+            .any(|&transform| wall_collision_check(player_translation, transform.translation))
+    {
+        encounter_tracker.timer.tick(time.delta());
+        if encounter_tracker.timer.just_finished() {
+            player.active = false;
+            encounter_tracker.timer = Timer::from_seconds(thread_rng().gen_range(1.0..=6.0), true);
+            create_fadeout(&mut commands, Some(GameState::Combat), &ascii);
         }
+    }
 }
 
 fn spawn_player(mut commands: Commands, characters: Res<CharacterSheet>) {
-
     // /* Creates player ascii sprite */
     // let player = spawn_ascii_sprite(
     //     &mut commands,
-    //     &ascii, 
-    //     1, 
-    //     Color::rgb(0.3, 0.3, 0.9), 
+    //     &ascii,
+    //     1,
+    //     Color::rgb(0.3, 0.3, 0.9),
     //     Vec3::new(2.0 * TILE_SIZE, -2.0 * TILE_SIZE, 900.0),
     //     Vec3::splat(1.0)
     // );
@@ -228,13 +230,13 @@ fn spawn_player(mut commands: Commands, characters: Res<CharacterSheet>) {
             current_frame: 0,
         })
         .insert(PlayerGraphics {
-            facing:FacingDirection::Down,
+            facing: FacingDirection::Down,
         })
         .insert(Name::new("Player"))
-        .insert(Player { 
-            speed: 3.0, 
-            active: true, 
-            just_moved: false, 
+        .insert(Player {
+            speed: 3.0,
+            active: true,
+            just_moved: false,
             exp: 0,
         })
         .insert(CombatStats {
@@ -243,14 +245,16 @@ fn spawn_player(mut commands: Commands, characters: Res<CharacterSheet>) {
             attack: 2,
             defense: 1,
         })
-        .insert(EncounterTracker{ timer: Timer::from_seconds(thread_rng().gen_range(0.0..=6.0), true)});
+        .insert(EncounterTracker {
+            timer: Timer::from_seconds(thread_rng().gen_range(0.0..=6.0), true),
+        });
 
     // /* Creates background ascii OLD */
     // let background = spawn_ascii_sprite(
-    //     &mut commands, 
-    //     &ascii, 
-    //     0, 
-    //     Color::rgb(0.5, 0.5, 0.5), 
+    //     &mut commands,
+    //     &ascii,
+    //     0,
+    //     Color::rgb(0.5, 0.5, 0.5),
     //     Vec3::new(0.0, 0.0, -1.0),
     //     Vec3::splat(1.0)
     // );

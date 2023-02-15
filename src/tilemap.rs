@@ -1,8 +1,15 @@
-use std::{io::{BufReader, BufRead}, fs::File};
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+};
 
 use bevy::prelude::*;
 
-use crate::{ascii::{AsciiSheet, spawn_ascii_sprite}, TILE_SIZE, GameState, npc::Npc};
+use crate::{
+    ascii::{spawn_ascii_sprite, AsciiSheet},
+    npc::Npc,
+    GameState, TILE_SIZE,
+};
 
 pub struct TileMapPlugin;
 
@@ -17,20 +24,15 @@ struct Map;
 
 impl Plugin for TileMapPlugin {
     fn build(&self, app: &mut App) {
-        app
-        .add_system_set(
-            SystemSet::on_enter(GameState::Overworld).with_system(create_simple_map)
+        app.add_system_set(
+            SystemSet::on_enter(GameState::Overworld).with_system(create_simple_map),
         )
-        .add_system_set(
-            SystemSet::on_resume(GameState::Overworld).with_system(show_map)
-        )
-        .add_system_set(
-            SystemSet::on_pause(GameState::Overworld).with_system(hide_map)
-        );
+        .add_system_set(SystemSet::on_resume(GameState::Overworld).with_system(show_map))
+        .add_system_set(SystemSet::on_pause(GameState::Overworld).with_system(hide_map));
     }
 }
 
-fn create_simple_map(mut commands: Commands, ascii: Res<AsciiSheet>){
+fn create_simple_map(mut commands: Commands, ascii: Res<AsciiSheet>) {
     let file = File::open("assets/map.txt").expect("No map file found");
     let mut tiles = Vec::new();
 
@@ -44,33 +46,37 @@ fn create_simple_map(mut commands: Commands, ascii: Res<AsciiSheet>){
                     _ => Color::rgb(0.9, 0.9, 0.9),
                 };
                 let tile = spawn_ascii_sprite(
-                    &mut commands, 
-                    &ascii, 
-                    char as usize, 
+                    &mut commands,
+                    &ascii,
+                    char as usize,
                     color,
                     Vec3::new(x as f32 * TILE_SIZE, -(y as f32) * TILE_SIZE, 100.0),
-                    Vec3::splat(1.0));   
-                    if char == '#' {
-                        commands.entity(tile).insert(TileCollider);
-                    }
-                    if char == '@' {
-                        commands.entity(tile).insert(Npc::Healer).insert(TileCollider);
-                    }
-                    if char == '~' {
-                        commands.entity(tile).insert(EncounterSpawner);
-                    }
-                    tiles.push(tile);
+                    Vec3::splat(1.0),
+                );
+                if char == '#' {
+                    commands.entity(tile).insert(TileCollider);
+                }
+                if char == '@' {
+                    commands
+                        .entity(tile)
+                        .insert(Npc::Healer)
+                        .insert(TileCollider);
+                }
+                if char == '~' {
+                    commands.entity(tile).insert(EncounterSpawner);
+                }
+                tiles.push(tile);
             }
         }
     }
 
     commands
-    .spawn()
-    .insert(Map)
-    .insert(Name::new("Map"))
-    .insert(Transform::default())
-    .insert(GlobalTransform::default())
-    .push_children(&tiles);
+        .spawn()
+        .insert(Map)
+        .insert(Name::new("Map"))
+        .insert(Transform::default())
+        .insert(GlobalTransform::default())
+        .push_children(&tiles);
 }
 
 fn hide_map(

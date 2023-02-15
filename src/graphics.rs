@@ -20,7 +20,7 @@ pub enum FacingDirection {
     Up,
     Down,
     Left,
-    Right
+    Right,
 }
 
 #[derive(Component)]
@@ -38,8 +38,8 @@ pub struct FrameAnimation {
 impl Plugin for GraphicsPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system_to_stage(StartupStage::PreStartup, Self::load_graphics)
-        .add_system(Self::frame_animation)
-        .add_system(Self::update_player_graphics);
+            .add_system(Self::frame_animation)
+            .add_system(Self::update_player_graphics);
     }
 }
 
@@ -48,7 +48,7 @@ pub fn spawn_enemy_sprite(
     characters: &CharacterSheet,
     translation: Vec3,
     enemy_type: EnemyType,
-)-> Entity {
+) -> Entity {
     let mut sprite = match enemy_type {
         EnemyType::Bat => TextureAtlasSprite::new(characters.bat_frames[0]),
         EnemyType::Ghost => TextureAtlasSprite::new(characters.ghost_frames[0]),
@@ -60,7 +60,7 @@ pub fn spawn_enemy_sprite(
             frames: characters.bat_frames.to_vec(),
             current_frame: 0,
         },
-        
+
         EnemyType::Ghost => FrameAnimation {
             timer: Timer::from_seconds(0.2, true),
             frames: characters.ghost_frames.to_vec(),
@@ -70,7 +70,7 @@ pub fn spawn_enemy_sprite(
 
     commands
         .spawn_bundle(SpriteSheetBundle {
-            sprite:sprite,
+            sprite: sprite,
             texture_atlas: characters.handle.clone(),
             transform: Transform {
                 translation: translation,
@@ -94,7 +94,7 @@ impl GraphicsPlugin {
             Vec2::splat(16.0),
             12,
             8,
-            Vec2::splat(0.01)
+            Vec2::splat(0.01),
         );
         let columns = 12;
 
@@ -111,18 +111,18 @@ impl GraphicsPlugin {
     }
 
     fn update_player_graphics(
-        mut sprites_query:Query<(&PlayerGraphics, &mut FrameAnimation),
-        Changed<PlayerGraphics>>,
-        characters: Res<CharacterSheet>) {
-            for (graphics, mut animation) in sprites_query.iter_mut() {
-                animation.frames = match graphics.facing {
-                    FacingDirection::Up => characters.player_up.to_vec(),
-                    FacingDirection::Down => characters.player_down.to_vec(),
-                    FacingDirection::Left => characters.player_left.to_vec(),
-                    FacingDirection::Right => characters.player_right.to_vec(),
-                }
+        mut sprites_query: Query<(&PlayerGraphics, &mut FrameAnimation), Changed<PlayerGraphics>>,
+        characters: Res<CharacterSheet>,
+    ) {
+        for (graphics, mut animation) in sprites_query.iter_mut() {
+            animation.frames = match graphics.facing {
+                FacingDirection::Up => characters.player_up.to_vec(),
+                FacingDirection::Down => characters.player_down.to_vec(),
+                FacingDirection::Left => characters.player_left.to_vec(),
+                FacingDirection::Right => characters.player_right.to_vec(),
             }
         }
+    }
 
     fn frame_animation(
         mut sprites_query: Query<(&mut TextureAtlasSprite, &mut FrameAnimation)>,

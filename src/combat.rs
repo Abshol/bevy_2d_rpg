@@ -8,7 +8,7 @@ use crate::{
         NineSliceIndices,
     },
     fadeout::create_fadeout,
-    graphics::{CharacterSheet, spawn_enemy_sprite},
+    graphics::{spawn_enemy_sprite, CharacterSheet},
     player::Player,
     GameState, RESOLUTION, TILE_SIZE,
 };
@@ -101,11 +101,17 @@ impl Plugin for CombatPlugin {
             .add_system_set(
                 SystemSet::on_enter(CombatState::Reward)
                     .with_system(give_reward)
-                    .with_system(despawn_enemy)
+                    .with_system(despawn_enemy),
             )
-            .add_system_set(SystemSet::on_update(CombatState::Reward).with_system(handle_accepting_reward))
-            .add_system_set(SystemSet::on_update(CombatState::PlayerAttack).with_system(handle_attack_effects))
-            .add_system_set(SystemSet::on_update(CombatState::EnemyAttack).with_system(handle_attack_effects));
+            .add_system_set(
+                SystemSet::on_update(CombatState::Reward).with_system(handle_accepting_reward),
+            )
+            .add_system_set(
+                SystemSet::on_update(CombatState::PlayerAttack).with_system(handle_attack_effects),
+            )
+            .add_system_set(
+                SystemSet::on_update(CombatState::EnemyAttack).with_system(handle_attack_effects),
+            );
     }
 }
 
@@ -117,7 +123,7 @@ fn handle_accepting_reward(
 ) {
     if keyboard.just_pressed(KeyCode::E) {
         combat_state.set(CombatState::Exiting).unwrap();
-        create_fadeout(&mut commands, None, & ascii);
+        create_fadeout(&mut commands, None, &ascii);
     }
 }
 
@@ -137,7 +143,7 @@ fn give_reward(
         &mut commands,
         &ascii,
         &reward_text,
-        Vec3::new(-((reward_text.len() /2) as f32 * TILE_SIZE), 0.0, 0.0)
+        Vec3::new(-((reward_text.len() / 2) as f32 * TILE_SIZE), 0.0, 0.0),
     );
     commands.entity(text).insert(CombatText);
     let (mut player, mut stats) = player_query.single_mut();
@@ -148,7 +154,7 @@ fn give_reward(
             &ascii,
             level_text,
             Vec3::new(
-                -((level_text.len()/2) as f32 * TILE_SIZE),
+                -((level_text.len() / 2) as f32 * TILE_SIZE),
                 -1.5 * TILE_SIZE,
                 0.0,
             ),
@@ -157,10 +163,7 @@ fn give_reward(
     }
 }
 
-fn despawn_all_combat_text(
-    mut commands: Commands,
-    text_query: Query<Entity, With<CombatText>>,
-) {
+fn despawn_all_combat_text(mut commands: Commands, text_query: Query<Entity, With<CombatText>>) {
     for entity in text_query.iter() {
         commands.entity(entity).despawn_recursive();
     }
@@ -177,7 +180,7 @@ fn spawn_player_health(
         &mut commands,
         &ascii,
         &health_text,
-        Vec3::new (-RESOLUTION + TILE_SIZE, -1.0 + TILE_SIZE, 0.0) - transform.translation,
+        Vec3::new(-RESOLUTION + TILE_SIZE, -1.0 + TILE_SIZE, 0.0) - transform.translation,
     );
     commands.entity(text).insert(CombatText);
     commands.entity(player).add_child(text);
@@ -199,7 +202,8 @@ fn handle_attack_effects(
             enemy_sprite.is_visible = true;
         }
     } else {
-        attack_fx.current_shake = attack_fx.screen_shake_amount * f32::sin(attack_fx.timer.percent() * 2.0 * std::f32::consts::PI);
+        attack_fx.current_shake = attack_fx.screen_shake_amount
+            * f32::sin(attack_fx.timer.percent() * 2.0 * std::f32::consts::PI);
     }
 
     if attack_fx.timer.just_finished() {
@@ -437,9 +441,8 @@ fn combat_input(
 }
 
 fn combat_camera(
-    mut camera_query: Query<&mut Transform,
-    With<Camera2d>>,
-    attack_fx: Res<AttackEffects>
+    mut camera_query: Query<&mut Transform, With<Camera2d>>,
+    attack_fx: Res<AttackEffects>,
 ) {
     let mut camera_transform = camera_query.single_mut();
     camera_transform.translation.x = attack_fx.current_shake;
@@ -461,7 +464,7 @@ fn spawn_enemy(mut commands: Commands, ascii: Res<AsciiSheet>, characters: Res<C
                 health: health,
                 max_health: health,
                 attack: attack,
-                defense: defense
+                defense: defense,
             }
         }
         EnemyType::Ghost => {
@@ -473,7 +476,7 @@ fn spawn_enemy(mut commands: Commands, ascii: Res<AsciiSheet>, characters: Res<C
                 health: health,
                 max_health: health,
                 attack: attack,
-                defense: defense
+                defense: defense,
             }
         }
     };
@@ -496,9 +499,7 @@ fn spawn_enemy(mut commands: Commands, ascii: Res<AsciiSheet>, characters: Res<C
 
     commands
         .entity(sprite)
-        .insert(Enemy {
-            enemy_type
-        })
+        .insert(Enemy { enemy_type })
         .insert(stats)
         .insert(Name::new("Bat"))
         .add_child(health_text);

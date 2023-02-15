@@ -1,6 +1,11 @@
 use bevy::{prelude::*, render::camera::Camera2d};
 
-use crate::{MainCamera, player::Player, combat::CombatStats, ascii::{AsciiSheet, NineSliceIndices, spawn_nine_slice, spawn_ascii_sprite, spawn_ascii_text}, TILE_SIZE, CLEAR, GameState};
+use crate::{
+    ascii::{spawn_ascii_sprite, spawn_ascii_text, spawn_nine_slice, AsciiSheet, NineSliceIndices},
+    combat::CombatStats,
+    player::Player,
+    GameState, MainCamera, CLEAR, TILE_SIZE,
+};
 
 pub struct NpcPlugin;
 
@@ -14,13 +19,15 @@ pub enum Npc {
 
 impl Plugin for NpcPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(SystemSet::on_update(GameState::Overworld)
-        .with_system(npc_speech)
-        .with_system(clear_speech.after(npc_speech)));
+        app.add_system_set(
+            SystemSet::on_update(GameState::Overworld)
+                .with_system(npc_speech)
+                .with_system(clear_speech.after(npc_speech)),
+        );
     }
 }
 
-fn clear_speech (
+fn clear_speech(
     mut commands: Commands,
     mut player_query: Query<&mut Player>,
     speech_query: Query<Entity, With<NpcText>>,
@@ -40,8 +47,8 @@ fn spawn_textbox(
     ascii: &AsciiSheet,
     indices: &NineSliceIndices,
     translation: Vec2,
-    text: &str
-) ->Entity {
+    text: &str,
+) -> Entity {
     let width = text.len() as f32 + 2.0;
     let text_nine_slice = spawn_nine_slice(commands, ascii, indices, width, 3.0);
     let background = spawn_ascii_sprite(
@@ -50,13 +57,14 @@ fn spawn_textbox(
         0,
         CLEAR,
         Vec3::new(0.0, 0.0, -1.0),
-        Vec3::new(width, 3.0, 1.0)
+        Vec3::new(width, 3.0, 1.0),
     );
     let x_offset = (-width / 2.0 + 1.5) * TILE_SIZE;
     let text = spawn_ascii_text(commands, ascii, text, Vec3::new(x_offset, 0.0, 0.0));
 
-    commands.spawn()
-        .insert( Transform {
+    commands
+        .spawn()
+        .insert(Transform {
             translation: translation.extend(900.0),
             ..Default::default()
         })
